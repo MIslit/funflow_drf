@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "../../fastapi"
+		},
+		{
+			"path": "../.."
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../flask"
+		},
+		{
+			"path": "../../../Users/user/Downloads/lesson-24-coolsite"
+		},
+		{
+			"path": "../../../Users/user/Downloads/lesson-20-coolsite"
+		},
+		{
+			"path": "../../test"
+		}
+	],
+	"settings": {}
+}
