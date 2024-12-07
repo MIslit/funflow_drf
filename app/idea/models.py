@@ -6,7 +6,7 @@ from django.urls import reverse
 
 class Category(models.Model):
     name = models.CharField(max_length=100, db_index=True)
-    slug = models.SlugField(max_length=255, unique=True, db_index=True)
+    slug = models.SlugField(max_length=50, unique=True, db_index=True)
 
     def __str__(self):
         return self.name
@@ -23,7 +23,7 @@ class Idea(models.Model):
         ordering = ['-time_create']
         
     def get_absolute_url(self):
-        return reverse("idea", kwargs={"idea_id": self.pk})
+        return reverse('idea', kwargs={'idea_id': self.pk})
 
     def __str__(self):
         return self.title

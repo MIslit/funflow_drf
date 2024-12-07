@@ -6,6 +6,7 @@ from decouple import AutoConfig
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+print(BASE_DIR)
 
 env_path = BASE_DIR / '.env'
 config = AutoConfig(search_path=env_path)
@@ -121,9 +122,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, '/app/static')
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, '/app/static')]
+    os.path.join(BASE_DIR, 'app/static')]
 
-MEDIA_ROOT = os.path.join(BASE_DIR, '/app/media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'app/media')
 MEDIA_URL = '/media/'
 
 AUTH_USER_MODEL = 'account.User'

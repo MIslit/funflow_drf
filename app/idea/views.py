@@ -3,11 +3,12 @@ from django.urls import reverse
 from django.contrib import messages
 from django.shortcuts import render
 
+
 from rest_framework import serializers
 from rest_framework.views import APIView
-from rest_framework.mixins import CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+
 
 from .mail import send_email
 from . import services
@@ -15,16 +16,18 @@ from . import selectors
 
 
 class IndexAPIView(APIView):
-    '''List of all ideas / Home page'''
+    '''
+    List of all ideas / Home page
+    '''
 
     class CategorySerializer(serializers.Serializer):
         id = serializers.CharField()
-        name = serializers.CharField()
-        slug = serializers.SlugField()
+        name = serializers.CharField(max_length=30)
+        slug = serializers.SlugField(max_length=10)
 
     class IndexSerializer(serializers.Serializer):
         id = serializers.CharField()
-        title = serializers.CharField()
+        title = serializers.CharField(max_length=100)
         description = serializers.CharField()
         time_create = serializers.DateTimeField()
         time_update = serializers.DateTimeField()
@@ -33,7 +36,7 @@ class IndexAPIView(APIView):
 
     permission_classes = (AllowAny,)
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         categories = selectors.get_all_categories()
         ideas = selectors.get_all_ideas()
 
@@ -41,12 +44,11 @@ class IndexAPIView(APIView):
         ideas_data = self.IndexSerializer(ideas, many=True).data
 
         return Response({
-            "categories": categories_data,
-            "ideas": ideas_data
+            'categories': categories_data,
+            'ideas': ideas_data,
         })
 
-    # need generics
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         '''
         Search ideas in home page
         '''
@@ -59,8 +61,8 @@ class IndexAPIView(APIView):
         ideas_data = self.IndexSerializer(ideas, many=True).data
 
         return Response({
-            "categories": categories_data,
-            "ideas": ideas_data,
+            'categories': categories_data,
+            'ideas': ideas_data,
         })
 
 
@@ -71,12 +73,12 @@ class IdeaCategoryAPIView(APIView):
 
     class CategorySerializer(serializers.Serializer):
         id = serializers.CharField()
-        name = serializers.CharField()
-        slug = serializers.SlugField()
+        name = serializers.CharField(max_length=100)
+        slug = serializers.SlugField(max_length=50)
 
     class IndexSerializer(serializers.Serializer):
         id = serializers.CharField()
-        title = serializers.CharField()
+        title = serializers.CharField(max_length=100)
         description = serializers.CharField()
         time_create = serializers.DateTimeField()
         time_update = serializers.DateTimeField()
@@ -85,16 +87,16 @@ class IdeaCategoryAPIView(APIView):
 
     permission_classes = (AllowAny,)
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         categories = selectors.get_all_categories()
-        ideas = selectors.get_idea_by_category(self.kwargs['category_slug'])
+        ideas = selectors.get_idea_by_category(request.data['category_slug'])
 
         categories_data = self.CategorySerializer(categories, many=True).data
         ideas_data = self.IndexSerializer(ideas, many=True).data
 
         return Response({
-            "categories": categories_data,
-            "ideas": ideas_data
+            'categories': categories_data,
+            'ideas': ideas_data,
         })
 
 
@@ -105,12 +107,12 @@ class IdeaDetailAPIView(APIView):
 
     class CategorySerializer(serializers.Serializer):
         id = serializers.CharField()
-        name = serializers.CharField()
-        slug = serializers.SlugField()
+        name = serializers.CharField(max_length=100)
+        slug = serializers.SlugField(max_length=50)
 
     class IdeaDetailSerializer(serializers.Serializer):
-        id = serializers.IntegerField()
-        title = serializers.CharField()
+        id = serializers.CharField()
+        title = serializers.CharField(max_length=100)
         description = serializers.CharField()
         time_create = serializers.DateTimeField()
         time_update = serializers.DateTimeField()
@@ -118,36 +120,34 @@ class IdeaDetailAPIView(APIView):
         category = serializers.CharField()
 
     class CommentSerializer(serializers.Serializer):
-        id = serializers.IntegerField()
+        id = serializers.CharField()
         author = serializers.CharField()
         text = serializers.CharField(max_length=250)
         score = serializers.ChoiceField(selectors.SCORE_CHOICES)
 
     permission_classes = (AllowAny,)
 
-    def get(self, request, *args, **kwargs):
-        pk = self.request.data['pk']
-        idea = selectors.get_one_idea(pk)
+    def get(self, request, **kwargs):
+        idea = selectors.get_one_idea(kwargs['pk'])
         categories = selectors.get_all_categories()
-        comments = selectors.get_comments_for_one_idea(pk)
+        comments = selectors.get_comments_for_one_idea(kwargs['pk'])
 
         idea_data = self.IdeaDetailSerializer(idea, many=True).data
         categories_data = self.CategorySerializer(categories, many=True).data
         comments_data = self.CommentSerializer(comments, many=True).data
 
-        # Возвращаем общий ответ
         return Response({
             'categories': categories_data,
             'idea': idea_data,
             'comments': comments_data,
         })
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, **kwargs):
         '''
         Add new comment for this idea
         '''
-        
-        pk = self.request.data['pk']
+
+        pk = kwargs['pk']
         idea = selectors.get_one_idea(pk)
         categories = selectors.get_all_categories()
         comments = selectors.get_comments_for_one_idea(pk)
@@ -159,7 +159,7 @@ class IdeaDetailAPIView(APIView):
         service = services.AddNewCommentService(request, pk)
         add_comment = service.create()
 
-        messages.success(self.request, 'Комментарий добавлен')
+        messages.success(request, 'Комментарий добавлен')
 
         return Response({
             'categories': categories_data,
@@ -170,18 +170,20 @@ class IdeaDetailAPIView(APIView):
 
 class AddIdeaAPIView(APIView):
     class CategorySerializer(serializers.Serializer):
-        name = serializers.CharField()
-        slug = serializers.SlugField()
+        id = serializers.CharField()
+        name = serializers.CharField(max_length=100)
+        slug = serializers.SlugField(max_length=50)
 
     class IdeaDetailSerializer(serializers.Serializer):
-        title = serializers.CharField()
+        id = serializers.CharField()
+        title = serializers.CharField(max_length=100)
         description = serializers.CharField()
         author_id = serializers.IntegerField()
         category_id = serializers.ChoiceField(selectors.CATEGORY)
 
     permission_classes = (AllowAny,)
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         categories = selectors.get_all_categories()
 
         categories_data = self.CategorySerializer(categories, many=True).data
@@ -190,11 +192,11 @@ class AddIdeaAPIView(APIView):
             'categories': categories_data,
         })
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         service = services.AddNewIdeaService(request)
         add_idea = service.create()
 
-        messages.success(self.request, 'Идея добавлена')
+        messages.success(request, 'Идея добавлена')
         send_email.delay()
 
         return HttpResponseRedirect(reverse('index'))
@@ -212,13 +214,12 @@ class CategoriesAPIView(APIView):
 
     permission_classes = (AllowAny,)
 
-    def get(self, request, format=None):
+    def get(self, request):
         categories = selectors.get_all_categories()
         categories_data = self.CategorySerializer(categories, many=True).data
 
-        # Возвращаем общий ответ
         return Response({
-            "categories": categories_data,
+            'categories': categories_data,
         })
 
 
