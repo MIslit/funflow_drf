@@ -1,4 +1,3 @@
-
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
@@ -11,6 +10,7 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+
 class Idea(models.Model):
     title = models.CharField(max_length=100, db_index=True)
     description = models.TextField(blank=True)
@@ -21,12 +21,13 @@ class Idea(models.Model):
 
     class Meta:
         ordering = ['-time_create']
-        
+
     def get_absolute_url(self):
         return reverse('idea', kwargs={'idea_id': self.pk})
 
     def __str__(self):
         return self.title
+
 
 class Comment(models.Model):
     class Score(models.IntegerChoices):
@@ -35,10 +36,10 @@ class Comment(models.Model):
         НОРМАЛЬНО = 3
         ХОРОШО = 4
         ОТЛИЧНО = 5
-    
+
     class Meta:
         ordering = ['-time_create']
-    
+
     score = models.IntegerField(choices=Score.choices)
     text = models.TextField(blank=False)
     time_create = models.DateTimeField(auto_now_add=True)
