@@ -2,6 +2,7 @@ from django.db.models import Q
 
 from .models import Idea, Category, Comment
 
+
 SCORE_CHOICES = (
     ('УЖАСНО', '1'),
     ('ПЛОХО', '2'),

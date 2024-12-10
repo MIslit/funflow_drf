@@ -2,12 +2,7 @@ from django.contrib import admin
 
 from .models import *
 
-# from .forms import RegisterUserForm, UserChangeForm
 from .models import *
-
-# class UserAdmin(UserAdmin):
-#     model = User
-#     list_display = ('email', 'username', 'avatar')
 
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
