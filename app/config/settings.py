@@ -1,5 +1,7 @@
 import os
 
+from datetime import timedelta
+
 from pathlib import Path
 
 from decouple import AutoConfig
@@ -17,6 +19,7 @@ DEBUG = config('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
+APPEND_SLASH=False
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +34,10 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework.authtoken',
+
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+
     'debug_toolbar',
 
     'django_celery_results',
@@ -154,8 +161,19 @@ CELERY_RESULT_BACKEND = "redis://localhost:6379"
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+}
+
+
+SIMPLE_JWT = {
+
+    'ROTATE_REFRESH_TOKENS': True,
+
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
+
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=60),
+
 }

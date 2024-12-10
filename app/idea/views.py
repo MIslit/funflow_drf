@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.contrib import messages
 from django.shortcuts import render
 
-from rest_framework import serializers
+from rest_framework import serializers, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -98,7 +98,7 @@ class IdeaCategoryAPIView(APIView):
         })
 
 
-class IdeaDetailAPIView(APIView):
+class IdeaDetailAPIView(APIView, mixins.RetrieveModelMixin):
     '''
     One idea page
     '''
@@ -124,6 +124,7 @@ class IdeaDetailAPIView(APIView):
         score = serializers.ChoiceField(selectors.SCORE_CHOICES)
 
     permission_classes = (AllowAny,)
+    serializer_class = CommentSerializer
 
     def get(self, request, **kwargs):
         idea = selectors.get_one_idea(kwargs['pk'])
@@ -166,7 +167,7 @@ class IdeaDetailAPIView(APIView):
         })
 
 
-class AddIdeaAPIView(APIView):
+class AddIdeaAPIView(APIView, mixins.CreateModelMixin):
     class CategorySerializer(serializers.Serializer):
         id = serializers.CharField()
         name = serializers.CharField(max_length=100)
