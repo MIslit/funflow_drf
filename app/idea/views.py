@@ -3,12 +3,10 @@ from django.urls import reverse
 from django.contrib import messages
 from django.shortcuts import render
 
-
 from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-
 
 from .mail import send_email
 from . import services
