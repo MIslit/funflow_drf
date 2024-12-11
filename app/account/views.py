@@ -1,97 +1,61 @@
 from django.contrib import messages
+from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import authenticate, logout, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.views import PasswordChangeView
-from django.shortcuts import get_object_or_404, render, redirect
-from django.urls import reverse_lazy
 
-from rest_framework import serializers, generics, viewsets, status, mixins
+
+from rest_framework import (
+    serializers,
+    generics,
+    viewsets,
+    status,
+    mixins,
+)
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
+from rest_framework.permissions import (
+    IsAuthenticated,
+    AllowAny,
+)
 
-from rest_framework_simplejwt.tokens import RefreshToken
-
-from idea.models import Idea
+from idea.models import Idea, Category
 from account.models import User
+from .serializers import RegisterSerializer, LoginSerializer
 
 
-class RegistrationAPIView(APIView, mixins.CreateModelMixin):
-    class UserCreateSerializer(serializers.Serializer):
-        email = serializers.EmailField()
-        username = serializers.CharField()
-        password = serializers.CharField()
-
-    serializer_class = UserCreateSerializer
-
-    def post(self, request):
-        serializer = self.UserCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            refresh = RefreshToken.for_user(user)  # Создание Refesh и Access
-            refresh.payload.update({    # Полезная информация в самом токене
-                'user_id': user.id,
-                'username': user.username
-            })
-
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),  # Отправка на клиент
-            }, status=status.HTTP_201_CREATED)
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
 
 
-class LoginAPIView(APIView, mixins.CreateModelMixin):
-    class LoginSerializer(serializers.Serializer):
-        username = serializers.CharField()
-        password = serializers.CharField()
-
-    serializer_class = LoginSerializer
+class LoginAPIView(APIView):
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        data = request.data
-        username = data.get('username', None)
-        password = data.get('password', None)
-        if username is None or password is None:
-            return Response({'error': 'Нужен и логин, и пароль'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        user = authenticate(username=username, password=password)
-        if user is None:
-            return Response({'error': 'Неверные данные'},
-                            status=status.HTTP_401_UNAUTHORIZED)
-
-        refresh = RefreshToken.for_user(user)
-        refresh.payload.update({
-            'user_id': user.id,
-            'username': user.username
-        })
-
-        return Response(status=status.HTTP_200_OK)
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = authenticate(
+            username=serializer.validated_data['username'],
+            password=serializer.validated_data['password']
+        )
+        if user:
+            login(request, user)
+            return Response({"message": "Успешный вход"}, status=status.HTTP_200_OK)
+        return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-class LogoutAPIView(APIView):
-    def post(self, request):
-        refresh_token = request.data.get('refresh_token')  # С клиента нужно отправить refresh token
-        if not refresh_token:
-            return Response({'error': 'Необходим Refresh token'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()  # Добавить его в чёрный список
-        except Exception as e:
-            return Response({'error': f'Неверный Refresh token {e}'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'success': 'Выход успешен'},
-                        status=status.HTTP_200_OK)
-
-
-class Profile(viewsets.ModelViewSet):
+class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        logout(request)
+        return Response({"message": "Успешный выход"}, status=status.HTTP_200_OK)
 
-class ProfileAPIView(generics.RetrieveUpdateAPIView):
+
+class ProfileAPIView(APIView, mixins.UpdateModelMixin):
     class UserSerializer(serializers.Serializer):
         id = serializers.CharField()
         username = serializers.CharField()
@@ -101,29 +65,52 @@ class ProfileAPIView(generics.RetrieveUpdateAPIView):
         last_name = serializers.CharField()
         ideas = Idea.objects.filter(author__username=username)
 
+    class IdeaSerializer(serializers.Serializer):
+        id = serializers.CharField()
+        title = serializers.CharField(max_length=100)
+        description = serializers.CharField()
+        time_create = serializers.DateTimeField()
+        time_update = serializers.DateTimeField()
+        author_id = serializers.IntegerField()
+        category_id = serializers.IntegerField()
+
+    class CategorySerializer(serializers.Serializer):
+        id = serializers.CharField()
+        name = serializers.CharField(max_length=100)
+        slug = serializers.SlugField(max_length=50)
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
     lookup_field = 'username'
-    
 
-    # def get(self, request, *args, **kwargs):
-    #     user = get_object_or_404(User, username=kwargs['username'])
-    #     ideas = Idea.objects.filter(author__username=kwargs['username'])
-    #     categories = Category.objects.all()
+    def get(self, request, *args, **kwargs):
+        user = get_object_or_404(User, username=kwargs['username'])
+        ideas = Idea.objects.filter(author__username=kwargs['username'])
+        categories = Category.objects.all()
 
-    #     user_data = UserSerializer(user).data
-    #     ideas_data = IdeaSerializer(ideas, many=True).data
-    #     categories_data = CategorySerializer(categories, many=True).data
-        
-    #     return Response({
-    #         'user': user_data,
-    #         'ideas': ideas_data,
-    #         'categories': categories_data,
-    #     })
+        user_data = self.UserSerializer(user).data
+        ideas_data = self.IdeaSerializer(ideas, many=True).data
+        categories_data = self.CategorySerializer(categories, many=True).data
 
-    # def post(self, request):
-    #     pass
+        return Response({
+            'user': user_data,
+            'ideas': ideas_data,
+            'categories': categories_data,
+        })
+
+    def patch(self, request, *args, **kwargs):
+        print(f"ДАТА - {request.data}")
+        user = User.objects.get(username=kwargs['username'])
+        print(user)
+        user.email = request.data['email']
+        user.about_me = request.data['about_me']
+        user.first_name = request.data['first_name']
+        user.last_name = request.data['last_name']
+
+        user.save()
+
+        return Response({}, status=status.HTTP_201_CREATED)
 
 
 @login_required(login_url='/login/')
